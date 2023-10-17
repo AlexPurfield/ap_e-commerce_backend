@@ -4,24 +4,28 @@ const { Tag, Product, ProductTag } = require('../../models');
 // The `/api/tags` endpoint
 
 router.get('/', async (req, res) => {
-  // find all tags
-  // be sure to include its associated Product data
-  await Tag.findAll({
-    attributes: ["id", "tag_name"],
-    include: [
-      {
-        model: ProductTag,
-        attributes: ["id", "product_name", "price" , "stock", "category_id"],
-        through: "ProductTag",
-      },
-    ],
-  })
-  .then((tagData) => {
-    res.json(tagData);
-  })
-  .catch((err) =>{
-  res.json(err);
-});
+  try {
+    // Find all tags and include associated Product data
+    const tagData = await Tag.findAll({
+      attributes: ["id", "tag_name"],
+      include: [
+        {
+          model: Product,
+          attributes: ["id", "product_name", "price", "stock", "category_id"],
+          through: { attributes: [] }, // Specify the attributes to include or exclude as needed
+        },
+      ],
+    });
+
+    if (tagData) {
+      res.json(tagData);
+    } else {
+      res.status(404).json({ message: "No tags found." });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 router.get('/:id', (req, res) => {
@@ -58,11 +62,14 @@ router.post('/', (req, res) => {
 
 router.put('/:id', (req, res) => {
   // update a tag's name by its `id` value
-  Tag.update(req.body.tag_name,{
-    where: {
-      id: req.params.id,
-    },
-  })
+  Tag.update(
+    {tag_name: req.body.tag_name},
+    {
+      where: {
+        id:req.params.id,
+      },
+    }
+  )
   .then((tag) => {
     res.json(tag);
   })
